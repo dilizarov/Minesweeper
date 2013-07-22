@@ -23,11 +23,20 @@ class Board
 
   def draw_board
     @grid.flatten.each_with_index do |tile, i|
-      print tile.display
+      print tile.display.to_s + " "
       if (i + 1) % @grid.length == 0
         puts ""
       end
     end
+  end
+
+  def won?
+    @grid.flatten.each do |tile|
+      next if tile.is_bomb?
+      return false if tile.display == '*'
+    end
+
+    true
   end
 
   private
@@ -79,29 +88,18 @@ class Tile
 
     until fringe.empty?
       current_tile = fringe.shift
-      x, y = current_tile.coord[0], current_tile.coord[1]
 
       adjacent_bombs = 0
 
-      ADJ_DIRECTIONS.each do |dx, dy|
-
-        next if !(x + dx).between?(0, @board.length - 1)
-        next if !(y + dy).between?(0, @board.length - 1)
-        next unless valid_move?(x, dx, y, dy)
-
-        adj_tile = @board[x + dx][y + dy]
-
-        if adj_tile.is_bomb?
-          adjacent_bombs += 1
-        else
-          fringe << adj_tile
-        end
+      current_tile.neighbors.each do |neighbor|
+        adjacent_bombs += 1 if neighbor.is_bomb?
       end
 
       if adjacent_bombs > 0
         current_tile.display = adjacent_bombs
       else
         current_tile.display = "_"
+        fringe.concat(current_tile.neighbors)
       end
 
     end
@@ -111,12 +109,28 @@ class Tile
     @board = board
   end
 
+  def neighbors
+    neighbors = []
+    x, y = self.coord[0], self.coord[1]
+
+    ADJ_DIRECTIONS.each do |dx, dy|
+
+      next if !(x + dx).between?(0, @board.length - 1)
+      next if !(y + dy).between?(0, @board.length - 1)
+      next unless valid_move?(x, dx, y, dy)
+
+      adj_tile = @board[x + dx][y + dy]
+      neighbors << adj_tile
+    end
+
+    neighbors
+  end
+
   def valid_move?(x, dx, y, dy)
     @board[x + dx][y + dy].display == "*"
   end
-
-  def flag
-  end
+  # def flag
+#   end
 
 end
 
@@ -125,7 +139,7 @@ class Player
   def play
     game_board = Board.new
 
-    while true
+    until game_board.won?
       game_board.draw_board
 
       puts "Enter tile ([x,y]) "
@@ -135,11 +149,13 @@ class Player
       tile = game_board.grid[x_coord][y_coord]
       if tile.bomb
         puts "You lose!"
-        return false
+        return
       else
         tile.reveal
       end
     end
+
+    puts "Congrats, your IQ is over 50!"
   end
 end
 

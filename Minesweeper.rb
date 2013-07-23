@@ -2,16 +2,25 @@ class Board
 
   attr_reader :grid
 
-  def initialize
-    @grid = create_grid
+  def initialize(mode = 'small')
+    raise 'Invalid mode! (only small or large)' if (mode != 'small' && mode != 'large')
+    if mode == 'small'
+      n = 9
+      @max_mines = 10
+    elsif mode == 'large'
+      n = 16
+      @max_mines = 40
+    end
+
+    @grid = create_grid(n)
   end
 
-  def create_grid
+  def create_grid(n)
 
-    grid = (0...9).map { [nil] * 9 }
+    grid = (0...n).map { [nil] * n }
 
-    (0...9).each do |i|
-      (0...9).each do |j|
+    (0...n).each do |i|
+      (0...n).each do |j|
         grid[i][j] = Tile.new([i,j])
       end
     end
@@ -33,7 +42,7 @@ class Board
   def won?
     @grid.flatten.each do |tile|
       next if tile.is_bomb?
-      return false if tile.display == '*'
+      return false if tile.display == '*' || tile.display == 'F'
     end
 
     true
@@ -44,7 +53,7 @@ class Board
   def place_bombs(grid)
     no_of_bombs = 0
 
-    until no_of_bombs == 10
+    until no_of_bombs == @max_mines
       tile = grid.flatten.sample
       unless tile.bomb
         tile.bomb = true
@@ -129,25 +138,32 @@ class Tile
   def valid_move?(x, dx, y, dy)
     @board[x + dx][y + dy].display == "*"
   end
-  # def flag
-#   end
+
+  def flag
+    if self.display == '*'
+      self.display = 'F'
+    elsif self.display == 'F'
+      self.display = '*'
+    end
+  end
 
 end
 
 class Player
 
-  def play
-    game_board = Board.new
+  def play(mode)
+    game_board = Board.new(mode)
 
     until game_board.won?
       game_board.draw_board
 
-      puts "Enter tile ([x,y]) "
-      coord = gets.chomp
-      x_coord = coord[1].to_i
-      y_coord = coord[3].to_i
+      puts "Enter tile (R [x,y] or F [x,y]) "
+      x_coord, y_coord, flag = clean_io
       tile = game_board.grid[x_coord][y_coord]
-      if tile.bomb
+
+      if flag == 'F'
+        tile.flag
+      elsif tile.bomb
         puts "You lose!"
         return
       else
@@ -157,5 +173,16 @@ class Player
 
     puts "Congrats, your IQ is over 50!"
   end
+
+  def clean_io
+    flag, coord = gets.chomp.split
+    coord.delete!('[')
+    coord.delete!(']')
+    x_coord, y_coord = coord.split(',')
+    [x_coord.to_i, y_coord.to_i, flag]
+  end
+
 end
 
+player = Player.new
+player.play('large')

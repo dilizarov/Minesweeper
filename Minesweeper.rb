@@ -1,3 +1,5 @@
+require 'yaml'
+
 class Board
 
   attr_reader :grid
@@ -11,8 +13,7 @@ class Board
       n = 16
       @max_mines = 40
     end
-
-    @grid = create_grid(n)
+    ARGV[0] ? @grid = Board.load : @grid = create_grid(n)
   end
 
   def create_grid(n)
@@ -31,7 +32,18 @@ class Board
   end
 
   def draw_board
+    print '  '
+    (0..@grid.length - 1).each do |i|
+      print i.to_s(16) + " "
+    end
+    puts ""
+
     @grid.flatten.each_with_index do |tile, i|
+      print (i / @grid.length).to_s(16) + " " if (i % @grid.length == 0)
+      # if tile.coord[0] == (i % @grid.length == 0)
+#         print i.to_s(16) + " "
+#       end
+
       print tile.display.to_s + " "
       if (i + 1) % @grid.length == 0
         puts ""
@@ -46,6 +58,19 @@ class Board
     end
 
     true
+  end
+
+  def save(name)
+    mothafucka = (@grid).to_yaml
+    File.open(name, "w") do |f|
+      f.puts mothafucka
+    end
+  end
+
+  def self.load
+    contents = File.read(ARGV[0])
+    grid = YAML::load(contents)
+    grid
   end
 
   private
@@ -157,9 +182,18 @@ class Player
     until game_board.won?
       game_board.draw_board
 
-      puts "Enter tile (R [x,y] or F [x,y]) "
-      x_coord, y_coord, flag = clean_io
-      tile = game_board.grid[x_coord][y_coord]
+      puts "Enter tile (R [x,y] or F [x,y]) or save game (S)"
+      input = $stdin.gets.chomp
+      if input[0] == 'R' || input[0] == 'F'
+        x_coord, y_coord, flag = clean_io(input)
+        tile = game_board.grid[x_coord][y_coord]
+      elsif input[0] == 'S'
+        puts "Please name your file (filename.txt)"
+        name = $stdin.gets.chomp
+        game_board.save(name)
+        puts "See you later!"
+        return
+      end
 
       if flag == 'F'
         tile.flag
@@ -174,12 +208,13 @@ class Player
     puts "Congrats, your IQ is over 50!"
   end
 
-  def clean_io
-    flag, coord = gets.chomp.split
-    coord.delete!('[')
-    coord.delete!(']')
-    x_coord, y_coord = coord.split(',')
-    [x_coord.to_i, y_coord.to_i, flag]
+  def clean_io(input)
+    flag, coord = input.split
+
+      coord.delete!('[')
+      coord.delete!(']')
+      x_coord, y_coord = coord.split(',')
+      [x_coord.to_i(16), y_coord.to_i(16), flag]
   end
 
 end
